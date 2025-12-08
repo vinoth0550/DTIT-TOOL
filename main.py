@@ -1,3 +1,4 @@
+
 # main.py
 
 from fastapi import FastAPI
@@ -6,7 +7,8 @@ from fastapi.staticfiles import StaticFiles
 
 import config
 from  converters import pdf_to_word, word_to_pdf, add_pg_no, bg_remove, pdf_to_excel, excel_to_pdf
-from converters import text_to_speech, bg_white_adder, jpg_to_pdf, pdf_to_jpg
+from converters import text_to_speech, bg_white_adder, jpg_to_pdf, pdf_to_jpg, black_white_converter
+from converters import split_pdf, merge_pdf, pdf_to_pptx, pptx_to_pdf
 
 
 app = FastAPI(
@@ -15,7 +17,7 @@ app = FastAPI(
     version=config.APP_VERSION,
 )
 
-# ========== CORS ==========
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.ALLOWED_ORIGINS,
@@ -24,13 +26,11 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
 )
 
-# ========== STATIC DOWNLOADS ==========
-# This will serve everything under storage/outputs/ at /downloads/...
-# So a file at storage/outputs/pdf_to_word/abc.docx is:
-#   GET /downloads/pdf_to_word/abc.docx
+# STATIC DOWNLOADS 
+
 app.mount("/downloads", StaticFiles(directory=config.OUTPUT_ROOT), name="downloads")
 
-# ========== ROUTERS (TOOLS) ==========
+# ROUTERS (TOOLS) 
 app.include_router(pdf_to_word.router)
 
 app.include_router(word_to_pdf.router)
@@ -51,13 +51,17 @@ app.include_router(jpg_to_pdf.router)
 
 app.include_router(pdf_to_jpg.router)
 
-# When you create more tools, just do:
-# from services import image_to_pdf, pdf_to_jpg, ...
-# app.include_router(image_to_pdf.router)
-# app.include_router(pdf_to_jpg.router)
-# etc.
+app.include_router(black_white_converter.router)
 
-# ========== BASIC HEALTH CHECK ==========
+app.include_router(split_pdf.router)
+
+app.include_router(merge_pdf.router)
+
+app.include_router(pdf_to_pptx.router)
+
+app.include_router(pptx_to_pdf.router)
+
+
 @app.get("/api/")
 def home():
     return {"message": "DTIT Tools API running successfully!"}

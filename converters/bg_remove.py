@@ -1,4 +1,5 @@
-# services/bg_remove.py
+
+# converters/bg_remove.py
 
 import uuid
 from pathlib import Path
@@ -19,6 +20,7 @@ router = APIRouter(
 TOOL_NAME = "bg_remove"
 
 # Allowed file extensions
+
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "bmp", "gif", "tiff"}
 
 
@@ -27,13 +29,14 @@ def is_valid_image(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-# ----- Your logic (NO CHANGES) -----
+
+
 def process_background_removal(input_path: Path, output_path: Path):
     input_img = Image.open(input_path)
     output_img = remove(input_img)
     output_img.save(output_path)
     return True
-# ----------------------------------
+
 
 
 @router.post("/")

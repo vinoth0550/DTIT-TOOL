@@ -1,5 +1,5 @@
 
-# services/pdf_to_excel.py
+# converters/pdf_to_excel.py
 
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException
@@ -22,9 +22,7 @@ router = APIRouter(
 TOOL_NAME = "pdf_to_excel"
 
 
-# ----------------------------------------
-# Your Original Hybrid Extraction Function
-# ----------------------------------------
+
 def hybrid_pdf_to_excel(pdf_path, output_path):
 
     reader = easyocr.Reader(["en"], gpu=False)
@@ -82,9 +80,9 @@ def hybrid_pdf_to_excel(pdf_path, output_path):
     return output_path
 
 
-# ----------------------------------------
+
 # FastAPI Route
-# ----------------------------------------
+
 @router.post("/")
 async def convert_pdf_to_excel(file: UploadFile = File(...)):
 
@@ -113,9 +111,9 @@ async def convert_pdf_to_excel(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Conversion failed: {e}")
 
 
-# ----------------------------------------
+
 # Download Route
-# ----------------------------------------
+
 @router.get("/file/{file_name}")
 def download_excel(file_name: str):
     file_path = config.OUTPUT_ROOT / TOOL_NAME / file_name

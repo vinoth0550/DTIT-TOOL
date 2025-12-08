@@ -1,4 +1,7 @@
-# services/pdf_to_word.py
+
+
+# converters/pdf_to_word.py
+
 from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File
@@ -13,7 +16,7 @@ router = APIRouter(
     tags=["PDF to Word"],
 )
 
-TOOL_NAME = "pdf_to_word"  # used as folder name under uploads/ and outputs/
+TOOL_NAME = "pdf_to_word"  
 
 
 def pdf_to_word_internal(pdf_path: Path, output_path: Path):
@@ -23,13 +26,13 @@ def pdf_to_word_internal(pdf_path: Path, output_path: Path):
         cv.close()
     except Exception as e:
         if output_path.exists():
-            output_path.unlink()  # delete partially created file
+            output_path.unlink()  
         raise Exception(f"Conversion failed: {str(e)}")
 
 
 @router.post("/")
 async def convert_pdf_to_word(file: UploadFile = File(...)):
-    # 1. Validate extension
+    #  Validate extension
     if not file.filename.lower().endswith(".pdf"):
         return {
             "status": "error",
@@ -37,19 +40,18 @@ async def convert_pdf_to_word(file: UploadFile = File(...)):
         }
 
     try:
-        # 2. Save upload in storage/uploads/pdf_to_word/
+        # Save upload in storage/uploads/pdf_to_word/
         input_path = save_upload(file, TOOL_NAME)
 
-        # 3. Prepare output path in storage/outputs/pdf_to_word/
+        # Prepare output path in storage/outputs/pdf_to_word/
         original_name = input_path.stem  # filename without extension
         output_path = build_output_path(original_name, ".docx", TOOL_NAME)
 
-        # 4. Convert
+        # Convert
         pdf_to_word_internal(input_path, output_path)
 
-        # 5. Build download link
-        # We will mount /downloads -> OUTPUT_ROOT in main.py, so:
-        #     /downloads/pdf_to_word/<filename>
+        #  download link
+     
         download_link = f"{config.BASE_DOWNLOAD_URL}/{TOOL_NAME}/{output_path.name}"
 
         return {

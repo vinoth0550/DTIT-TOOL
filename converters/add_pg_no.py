@@ -1,4 +1,6 @@
-# services/add_pg_no.py
+
+
+# converters/add_pg_no.py
 
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException, Form
@@ -19,9 +21,7 @@ router = APIRouter(
 TOOL_NAME = "add_pg_no"
 
 
-# ------------------------------
-# Your Original Function (unchanged)
-# ------------------------------
+
 def add_page_numbers(input_path, output_path):
     try:
         doc = fitz.open(input_path)
@@ -44,9 +44,9 @@ def add_page_numbers(input_path, output_path):
         return False
 
 
-# ------------------------------
+
 # Response Model
-# ------------------------------
+
 class PageNumberResponse(BaseModel):
     success: bool
     message: str
@@ -54,9 +54,9 @@ class PageNumberResponse(BaseModel):
 
 
 
-# ------------------------------
+
 # API Route
-# ------------------------------
+
 @router.post("/", response_model=PageNumberResponse)
 async def create_numbered_pdf(
     file: UploadFile = File(...),
@@ -73,7 +73,7 @@ async def create_numbered_pdf(
     # Output filename
     output_path = build_output_path(input_path.stem, "_numbered.pdf", TOOL_NAME)
 
-    # Run your conversion function
+
     success = add_page_numbers(str(input_path), str(output_path))
 
     if not success:
@@ -89,7 +89,7 @@ async def create_numbered_pdf(
     )
 
 
-# Optional download route (similar style to others)
+
 @router.get("/file/{file_name}")
 def download_file(file_name: str):
     file_path = config.OUTPUT_ROOT / TOOL_NAME / file_name

@@ -1,4 +1,5 @@
-# services/pdf_to_jpg.py
+
+# converters/pdf_to_jpg.py
 
 from pathlib import Path
 import shutil
@@ -26,7 +27,7 @@ async def convert_pdf_to_jpg(file: UploadFile = File(...)):
             content={"status": "error", "message": "Only PDF files allowed."}
         )
 
-    # ---------- Save uploaded PDF ----------
+    #  Save uploaded PDF
     input_path = save_upload(file, TOOL_NAME)
 
     # Extract filename without extension to use as base output name
@@ -40,7 +41,7 @@ async def convert_pdf_to_jpg(file: UploadFile = File(...)):
     temp_folder.mkdir(exist_ok=True, parents=True)
 
     try:
-        # ---------- Conversion Logic (unchanged) ----------
+        #  Conversion Logic 
         with fitz.open(input_path) as doc:
             for page_number in range(len(doc)):
                 page = doc.load_page(page_number)

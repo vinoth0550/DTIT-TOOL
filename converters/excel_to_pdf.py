@@ -1,4 +1,5 @@
-# services/excel_to_pdf.py
+
+# converters/excel_to_pdf.py
 
 import os
 import shutil
@@ -18,9 +19,7 @@ router = APIRouter(
 
 TOOL_NAME = "excel_to_pdf"
 
-# ---------------------
-# Your original function (unchanged)
-# ---------------------
+
 def excel_to_pdf(input_path, desired_output_path):
     """Convert Excel file to PDF using LibreOffice headless mode."""
 
@@ -63,9 +62,9 @@ def excel_to_pdf(input_path, desired_output_path):
     return desired_output_path
 
 
-# ---------------------
+
 # Main Route
-# ---------------------
+
 @router.post("/")
 async def convert_excel_to_pdf(file: UploadFile = File(...)):
 
@@ -96,9 +95,9 @@ async def convert_excel_to_pdf(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Conversion failed: {e}")
 
 
-# ---------------------
+
 # File Download Route
-# ---------------------
+
 @router.get("/file/{file_name}")
 def download_pdf(file_name: str):
 

@@ -1,4 +1,5 @@
-# services/bg_white_adder.py
+
+# converters/bg_white_adder.py
 
 import os
 from pathlib import Path
@@ -33,14 +34,14 @@ async def remove_background(file: UploadFile = File(...)):
         )
 
     try:
-        # ----------- Save Uploaded File -----------
+        #  Uploaded File
         input_path = save_upload(file, TOOL_NAME)
 
-        # Extract base name for clean output name (without UUID)
+        # Extract base name for clean output name 
         original_name = Path(file.filename).stem
         output_filename = build_output_path(original_name, ".jpg", TOOL_NAME)
 
-        # ----------- Image Processing (Original Logic Kept) -----------
+        # Image Processing 
         input_img = Image.open(input_path)
         output_img = remove(input_img)
 
@@ -51,7 +52,7 @@ async def remove_background(file: UploadFile = File(...)):
         # Save result
         final_img.save(output_filename, "JPEG")
 
-        # ----------- Download URL -----------
+        # Download URL
         download_url = f"{config.BASE_DOWNLOAD_URL}/{TOOL_NAME}/{Path(output_filename).name}"
 
         return {

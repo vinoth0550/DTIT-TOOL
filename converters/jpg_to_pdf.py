@@ -1,4 +1,5 @@
-# services/jpg_to_pdf.py
+
+# converters/jpg_to_pdf.py
 
 from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, HTTPException
@@ -28,10 +29,10 @@ async def convert_jpg_to_pdf(file: UploadFile = File(...)):
             content={"status": "error", "message": "JPG or JPEG format only."}
         )
 
-    # ----------- Save uploaded file (same logic retained) ----
+    # Save uploaded file 
     input_path = save_upload(file, TOOL_NAME)
 
-    # Output filename structure: example → photo.pdf, photo(1).pdf, etc.
+    # Output filename 
     base_name = Path(orig_name).stem
     output_path = build_output_path(base_name, ".pdf", TOOL_NAME)
 
