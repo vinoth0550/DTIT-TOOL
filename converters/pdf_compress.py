@@ -1,6 +1,6 @@
 
 
-# services/pdf_compress.py
+# converters/pdf_compress.py
 
 from fastapi import APIRouter, UploadFile, File
 from fastapi.responses import JSONResponse, FileResponse

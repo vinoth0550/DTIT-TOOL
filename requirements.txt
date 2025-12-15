@@ -1,2 +1,70 @@
-weasyprint
+# =========================
+# Core API
+# =========================
+fastapi
+uvicorn
+python-multipart
+
+# =========================
+# File handling & utils
+# =========================
+pydantic
+python-dotenv
+
+# =========================
+# PDF & Document processing
+# =========================
+pdf2docx
+PyPDF2
+pypdf
+pikepdf
+PyMuPDF
+reportlab
+
+# =========================
+# Office formats
+# =========================
+python-pptx
 mammoth
+
+# =========================
+# Image processing
+# =========================
+Pillow
+rembg
+
+# =========================
+# Excel & Tables
+# =========================
+pandas
+openpyxl
+tabula-py
+camelot-py
+pdfplumber
+
+# =========================
+# OCR
+# =========================
+easyocr
+pdf2image
+
+# =========================
+# Audio / Text-to-Speech
+# =========================
+gTTS
+pydub
+langdetect
+googletrans==4.0.0-rc1
+nltk
+
+# =========================
+# Compression / System tools
+# =========================
+ghostscript
+
+# =========================
+# Optional but recommended
+# =========================
+numpy
+scipy
+opencv-python

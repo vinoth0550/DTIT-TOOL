@@ -29,8 +29,6 @@ def is_valid_image(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-
-
 def process_background_removal(input_path: Path, output_path: Path):
     input_img = Image.open(input_path)
     output_img = remove(input_img)
