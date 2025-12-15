@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 import config
 from  converters import pdf_to_word, word_to_pdf, add_pg_no, bg_remove, pdf_to_excel, excel_to_pdf
 from converters import text_to_speech, bg_white_adder, jpg_to_pdf, pdf_to_jpg, black_white_converter
-from converters import split_pdf, merge_pdf, pdf_to_pptx, pptx_to_pdf
+from converters import split_pdf, merge_pdf, pdf_to_pptx, pptx_to_pdf, pdf_compress
 
 
 app = FastAPI(
@@ -60,6 +60,8 @@ app.include_router(merge_pdf.router)
 app.include_router(pdf_to_pptx.router)
 
 app.include_router(pptx_to_pdf.router)
+
+app.include_router(pdf_compress.router)
 
 
 @app.get("/api/")
