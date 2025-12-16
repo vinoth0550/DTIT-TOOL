@@ -4,6 +4,11 @@
 
 from pathlib import Path
 
+
+
+import shutil
+
+
 # BASIC APP INFO 
 APP_TITLE = "DTIT Tools API"
 APP_DESCRIPTION = "API for multiple office/media conversion tools"
@@ -39,3 +44,17 @@ BASE_DOMAIN = "https://python.selfietoons.com"
 # Base for static downloads (we'll mount /downloads to OUTPUT_ROOT)
 
 BASE_DOWNLOAD_URL = f"{BASE_DOMAIN}/downloads"
+
+
+# ---------- GHOSTSCRIPT ----------
+GS_BINARY = (
+    shutil.which("gs")
+    or shutil.which("gswin64c")
+    or r"C:\Program Files\gs\gs10.03.0\bin\gswin64c.exe"
+)
+
+
+
+
+
+

@@ -1,5 +1,6 @@
 
 
+
 # converters/pdf_compress.py
 
 from fastapi import APIRouter, UploadFile, File
@@ -21,114 +22,230 @@ router = APIRouter(
 TOOL_NAME = "pdf_compress"
 
 
-# FUNCTIONS 
+# COMPRESSION LOGIC 
+
 
 def compress_with_ghostscript(input_path, output_path, setting="ebook"):
     cmd = [
-        "gs",
+        config.GS_BINARY,
         "-sDEVICE=pdfwrite",
         "-dCompatibilityLevel=1.5",
         f"-dPDFSETTINGS=/{setting}",
-        "-dNOPAUSE", "-dQUIET", "-dBATCH",
+        "-dNOPAUSE",
+        "-dQUIET",
+        "-dBATCH",
         "-dDetectDuplicateImages=true",
         "-dCompressFonts=true",
         "-dSubsetFonts=true",
+        "-dColorImageDownsampleType=/Bicubic",
+        "-dGrayImageDownsampleType=/Bicubic",
+        "-dMonoImageDownsampleType=/Bicubic",
         "-dOptimize=true",
         f"-sOutputFile={output_path}",
         input_path
     ]
+
     try:
-        return subprocess.run(cmd, capture_output=True, timeout=120).returncode == 0
-    except:
+        result = subprocess.run(cmd, capture_output=True, timeout=120)
+        return result.returncode == 0
+    except Exception:
         return False
 
 
 def compress_with_ghostscript_aggressive(input_path, output_path):
     cmd = [
-        "gs",
+        config.GS_BINARY,
         "-sDEVICE=pdfwrite",
         "-dCompatibilityLevel=1.4",
         "-dPDFSETTINGS=/screen",
-        "-dNOPAUSE", "-dQUIET", "-dBATCH",
+        "-dNOPAUSE",
+        "-dQUIET",
+        "-dBATCH",
+        "-dDetectDuplicateImages=true",
+        "-dCompressFonts=true",
+        "-dSubsetFonts=true",
+        "-dDownsampleColorImages=true",
+        "-dDownsampleGrayImages=true",
+        "-dDownsampleMonoImages=true",
+        "-dColorImageResolution=100",
+        "-dGrayImageResolution=100",
+        "-dMonoImageResolution=100",
         "-dOptimize=true",
         f"-sOutputFile={output_path}",
         input_path
     ]
+
     try:
-        return subprocess.run(cmd, capture_output=True, timeout=120).returncode == 0
-    except:
+        result = subprocess.run(cmd, capture_output=True, timeout=120)
+        return result.returncode == 0
+    except Exception:
         return False
+
+
 
 
 def compress_image_data(image_bytes, quality=50, max_dimension=800):
     try:
-        img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        w, h = img.size
-        if max(w, h) > max_dimension:
-            ratio = min(max_dimension / w, max_dimension / h)
-            img = img.resize((int(w * ratio), int(h * ratio)), Image.Resampling.LANCZOS)
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=quality, optimize=True)
-        return buf.getvalue(), img.size
-    except:
+        img = Image.open(io.BytesIO(image_bytes))
+        
+        if img.mode in ('RGBA', 'LA'):
+            background = Image.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'RGBA':
+                background.paste(img, mask=img.split()[3])
+            else:
+                background.paste(img, mask=img.split()[1])
+            img = background
+        elif img.mode == 'P':
+            img = img.convert('RGB')
+        elif img.mode not in ('RGB', 'L'):
+            img = img.convert('RGB')
+        
+        width, height = img.size
+        if width > max_dimension or height > max_dimension:
+            ratio = min(max_dimension / width, max_dimension / height)
+            new_size = (int(width * ratio), int(height * ratio))
+            img = img.resize(new_size, Image.Resampling.LANCZOS)
+        
+        output = io.BytesIO()
+        img.save(output, format='JPEG', quality=quality, optimize=True)
+        
+        return output.getvalue(), img.size
+    except Exception:
         return None, None
 
 
-def compress_with_pikepdf(input_path, output_path, quality=45, max_dimension=700):
+def compress_with_pikepdf(input_path, output_path, quality=50, max_dimension=800):
+    
     try:
         pdf = pikepdf.open(input_path)
+        images_processed = 0
+        
         for page in pdf.pages:
-            res = page.get("/Resources", {})
-            xobjs = res.get("/XObject", {})
-            for k in list(xobjs.keys()):
-                x = xobjs[k]
-                if isinstance(x, pikepdf.Stream) and x.get("/Subtype") == pikepdf.Name.Image:
-                    data = x.read_bytes()
-                    new_data, size = compress_image_data(data, quality, max_dimension)
-                    if new_data:
-                        xobjs[k] = pikepdf.Stream(pdf, new_data)
-        pdf.save(output_path, compress_streams=True)
+            if '/Resources' not in page:
+                continue
+            resources = page['/Resources']
+            if '/XObject' not in resources:
+                continue
+            
+            xobjects = resources['/XObject']
+            
+            for name in list(xobjects.keys()):
+                try:
+                    xobj = xobjects[name]
+                    if not isinstance(xobj, pikepdf.Stream):
+                        continue
+                    
+                    if xobj.get('/Subtype') != pikepdf.Name.Image:
+                        continue
+                    
+                    width = int(xobj.get('/Width', 0))
+                    height = int(xobj.get('/Height', 0))
+                    
+                    if width < 50 or height < 50:
+                        continue
+                    
+                    try:
+                        raw_size = len(xobj.read_raw_bytes())
+                        
+                        filter_type = xobj.get('/Filter')
+                        if filter_type == pikepdf.Name.DCTDecode:
+                            image_data = xobj.read_raw_bytes()
+                        else:
+                            image_data = xobj.read_bytes()
+                        
+                        compressed_data, new_size = compress_image_data(
+                            image_data, quality=quality, max_dimension=max_dimension
+                        )
+                        
+                        if compressed_data and len(compressed_data) < raw_size * 0.9:
+                            new_stream = pikepdf.Stream(pdf, compressed_data)
+                            new_stream['/Type'] = pikepdf.Name.XObject
+                            new_stream['/Subtype'] = pikepdf.Name.Image
+                            new_stream['/Width'] = new_size[0]
+                            new_stream['/Height'] = new_size[1]
+                            new_stream['/ColorSpace'] = pikepdf.Name.DeviceRGB
+                            new_stream['/BitsPerComponent'] = 8
+                            new_stream['/Filter'] = pikepdf.Name.DCTDecode
+                            
+                            xobjects[name] = new_stream
+                            images_processed += 1
+                            
+                    except Exception:
+                        continue
+                        
+                except Exception:
+                    continue
+        
+        pdf.save(
+            output_path,
+            compress_streams=True,
+            object_stream_mode=pikepdf.ObjectStreamMode.generate,
+            recompress_flate=True
+        )
         pdf.close()
         return True
-    except:
+    except Exception:
         return False
 
 
-def compress_pdf(input_path, output_path):
-    original = os.path.getsize(input_path)
-    tmp = tempfile.mkdtemp()
+
+def compress_pdf(input_path, output_path, target_reduction=0.25):
+
+    original_size = os.path.getsize(input_path)
+    
+    temp_dir = tempfile.mkdtemp()
+    temp_gs_ebook = os.path.join(temp_dir, "gs_ebook.pdf")
+    temp_gs_screen = os.path.join(temp_dir, "gs_screen.pdf")
+    temp_pikepdf = os.path.join(temp_dir, "pikepdf.pdf")
+    
+    results = []
+    
     try:
-        candidates = []
-        p1 = Path(tmp) / "gs_ebook.pdf"
-        p2 = Path(tmp) / "gs_screen.pdf"
-        p3 = Path(tmp) / "pike.pdf"
-
-        if compress_with_ghostscript(input_path, p1):
-            candidates.append((p1, p1.stat().st_size))
-        if compress_with_ghostscript_aggressive(input_path, p2):
-            candidates.append((p2, p2.stat().st_size))
-        if compress_with_pikepdf(input_path, p3):
-            candidates.append((p3, p3.stat().st_size))
-
-        if not candidates:
+        if compress_with_ghostscript(input_path, temp_gs_ebook, "ebook"):
+            size = os.path.getsize(temp_gs_ebook)
+            results.append(("ghostscript_ebook", temp_gs_ebook, size))
+        
+        if compress_with_ghostscript_aggressive(input_path, temp_gs_screen):
+            size = os.path.getsize(temp_gs_screen)
+            results.append(("ghostscript_screen", temp_gs_screen, size))
+        
+        if compress_with_pikepdf(input_path, temp_pikepdf, quality=45, max_dimension=700):
+            size = os.path.getsize(temp_pikepdf)
+            results.append(("pikepdf", temp_pikepdf, size))
+        
+        if not results:
             shutil.copy2(input_path, output_path)
-            return original, original
-
-        best = min(candidates, key=lambda x: x[1])
-        shutil.copy2(best[0], output_path)
-        return original, best[1]
+            return original_size, original_size
+        
+        results.sort(key=lambda x: x[2])
+        best_name, best_path, best_size = results[0]
+        
+        if best_size < original_size:
+            shutil.copy2(best_path, output_path)
+            return original_size, best_size
+        else:
+            shutil.copy2(input_path, output_path)
+            return original_size, original_size
+            
     finally:
-        shutil.rmtree(tmp, ignore_errors=True)
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-def format_size(n):
-    return f"{n/1024/1024:.2f} MB" if n > 1024*1024 else f"{n/1024:.2f} KB"
+def format_size(size_bytes):
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.2f} KB"
+    else:
+        return f"{size_bytes / (1024 * 1024):.2f} MB"
+    
 
 
 # API ROUTES
 
+
 @router.post("/")
-async def compress_single(file: UploadFile = File(...)):
+async def compress_endpoint(file: UploadFile = File(...)):
     if not file.filename.lower().endswith(".pdf"):
         return JSONResponse(status_code=400, content={"status": "error", "message": "PDF only"})
 
@@ -137,54 +254,12 @@ async def compress_single(file: UploadFile = File(...)):
 
     original, compressed = compress_pdf(str(input_path), str(output_path))
 
-    reduction = max(0, (original - compressed) / original * 100)
+    reduction = ((original - compressed) / original * 100) if compressed < original else 0
 
     return {
         "status": "success",
         "download_link": f"{config.BASE_DOWNLOAD_URL}/{TOOL_NAME}/{output_path.name}",
-        "details": {
-            "original_size": format_size(original),
-            "compressed_size": format_size(compressed),
-            "reduction": f"{reduction:.1f}%"
-        }
+        "original_size": format_size(original),
+        "compressed_size": format_size(compressed),
+        "reduction_percentage": f"{reduction:.1f}%"
     }
-
-
-@router.post("/batch")
-async def compress_multiple(files: list[UploadFile] = File(...)):
-    results = []
-
-    for f in files:
-        if not f.filename.lower().endswith(".pdf"):
-            continue
-
-        ip = save_upload(f, TOOL_NAME)
-        op = build_output_path(Path(f.filename).stem, ".pdf", TOOL_NAME)
-
-        o, c = compress_pdf(str(ip), str(op))
-        r = max(0, (o - c) / o * 100)
-
-        results.append({
-            "file": f.filename,
-            "download_link": f"{config.BASE_DOWNLOAD_URL}/{TOOL_NAME}/{op.name}",
-            "original_size": format_size(o),
-            "compressed_size": format_size(c),
-            "reduction": f"{r:.1f}%"
-        })
-
-    return {"status": "success", "files": results}
-
-
-@router.get("/file/{filename}")
-def download(filename: str):
-    path = config.OUTPUT_ROOT / TOOL_NAME / filename
-    if not path.exists():
-        return JSONResponse(status_code=404, content={"status": "error", "message": "Not found"})
-    return FileResponse(str(path), media_type="application/pdf", filename=filename)
-
-
-
-
-
-
-# this is working but not compressing as like the fapi it need some work 
